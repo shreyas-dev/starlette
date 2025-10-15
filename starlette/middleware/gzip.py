@@ -7,7 +7,12 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 class GZipMiddleware:
-    def __init__(self, app: ASGIApp, minimum_size: int = 500, compresslevel: int = 9, excluded_content_types: tuple[str, ...] = (
+    def __init__(
+        self,
+        app: ASGIApp,
+        minimum_size: int = 500,
+        compresslevel: int = 9,
+        excluded_content_types: tuple[str, ...] = (
             "text/event-stream",
             "application/zip",
             "application/gzip",
@@ -15,7 +20,8 @@ class GZipMiddleware:
             "image/",
             "video/",
             "audio/",
-        )) -> None:
+        ),
+    ) -> None:
         self.app = app
         self.minimum_size = minimum_size
         self.compresslevel = compresslevel
@@ -29,7 +35,9 @@ class GZipMiddleware:
         headers = Headers(scope=scope)
         responder: ASGIApp
         if "gzip" in headers.get("Accept-Encoding", ""):
-            responder = GZipResponder(self.app, self.minimum_size, self.excluded_content_types, compresslevel=self.compresslevel)
+            responder = GZipResponder(
+                self.app, self.minimum_size, self.excluded_content_types, compresslevel=self.compresslevel
+            )
         else:
             responder = IdentityResponder(self.app, self.minimum_size, self.excluded_content_types)
 
@@ -39,7 +47,12 @@ class GZipMiddleware:
 class IdentityResponder:
     content_encoding: str
 
-    def __init__(self, app: ASGIApp, minimum_size: int, excluded_content_types: tuple[str, ...],) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        minimum_size: int,
+        excluded_content_types: tuple[str, ...],
+    ) -> None:
         self.app = app
         self.minimum_size = minimum_size
         self.send: Send = unattached_send
@@ -62,8 +75,7 @@ class IdentityResponder:
             headers = Headers(raw=self.initial_message["headers"])
             self.content_encoding_set = "content-encoding" in headers
             self.content_type_is_excluded = any(
-                headers.get("content-type", "").startswith(ct)
-                for ct in self.excluded_content_types
+                headers.get("content-type", "").startswith(ct) for ct in self.excluded_content_types
             )
         elif message_type == "http.response.body" and (self.content_encoding_set or self.content_type_is_excluded):
             if not self.started:
@@ -130,7 +142,9 @@ class IdentityResponder:
 class GZipResponder(IdentityResponder):
     content_encoding = "gzip"
 
-    def __init__(self, app: ASGIApp, minimum_size: int, excluded_content_types: tuple[str, ...], compresslevel: int = 9) -> None:
+    def __init__(
+        self, app: ASGIApp, minimum_size: int, excluded_content_types: tuple[str, ...], compresslevel: int = 9
+    ) -> None:
         super().__init__(app, minimum_size, excluded_content_types)
 
         self.gzip_buffer = io.BytesIO()
